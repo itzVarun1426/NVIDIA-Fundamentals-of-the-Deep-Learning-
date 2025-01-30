@@ -1,0 +1,122 @@
+#Code between the curly bracket is the code to use excluding curly bracket
+#only the cells noted below needs changes other cells does not require changes
+#the only reason behind your model not getting accepted and you not getting certificate is because your model is not fine tuned enough 
+#model needs to be atleast 92% accurate if not the submission is not taken granted
+#use the below codes to improve your model accuracy 
+
+7.2 Load ImageNet Base Model---
+
+        {
+        from torchvision.models import vgg16
+        from torchvision.models import VGG16_Weights
+        
+        weights = VGG16_Weights.DEFAULT
+        vgg_model = vgg16(weights=weights)
+
+        }
+
+
+7.3 Freeze Base Model ----
+
+        {
+
+        # Freeze base model
+        vgg_model.requires_grad_(False)
+        next(iter(vgg_model.parameters())).requires_grad
+        
+        }
+
+
+7.4 Add Layers to Model----
+
+        {
+
+        N_CLASSES = 6
+        
+        my_model = nn.Sequential(
+            vgg_model.features,
+            vgg_model.avgpool,
+            nn.Flatten(),
+            vgg_model.classifier[0:3],
+            nn.Linear(4096, 500),
+            nn.ReLU(),
+            nn.Linear(500, N_CLASSES)
+        )
+        my_model
+        
+        }
+
+7.5 Compile Model------
+
+        {
+
+        loss_function = nn.CrossEntropyLoss()
+        optimizer = Adam(my_model.parameters())
+        my_model = torch.compile(my_model.to(device))
+  
+        }
+
+
+7.6 Data Transforms----
+
+        {
+
+        IMG_WIDTH, IMG_HEIGHT = (224, 224)
+        
+        random_trans = transforms.Compose([
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms. RandomRotation (degrees=15),
+            transforms.RandomResizedCrop(size=(IMG_WIDTH, IMG_HEIGHT), scale=(0.8, 1.0))
+        ])
+
+        }      
+
+
+7.7 Load Dataset-----
+        
+        {
+        n = 32
+        
+        train_path = "data/fruits/train/"
+        train_data = MyDataset(train_path)
+        train_loader = DataLoader(train_data, batch_size=n, shuffle=True)
+        train_N = len(train_loader.dataset)
+        
+        valid_path = "data/fruits/valid/"
+        valid_data = MyDataset(valid_path)
+        valid_loader = DataLoader(valid_data, batch_size=n, shuffle=True)
+        valid_N = len(valid_loader.dataset)
+        }
+
+
+
+7.8 Train the Model-----
+
+        {
+        epochs = 10
+        
+        for epoch in range(epochs):
+            print('Epoch: {}'.format(epoch))
+            utils.train(my_model, train_loader, train_N, random_trans, optimizer, loss_function)
+            utils.validate(my_model, valid_loader, valid_N, loss_function)
+        }
+
+
+7.9 Unfreeze Model for Fine Tuning----(this contains changes at 2 cells)
+
+        cell 1{
+        # Unfreeze the base model
+        vgg_model.requires_grad_(True)
+        optimizer = Adam(my_model.parameters(), lr=.0001)
+        }
+
+        cell 2{
+        epochs = 3
+        
+        for epoch in range(epochs):
+            print('Epoch: {}'.format(epoch))
+            utils.train(my_model, train_loader, train_N, random_trans, optimizer, loss_function)
+            utils.validate(my_model, valid_loader, valid_N, loss_function)
+        
+        }
+
